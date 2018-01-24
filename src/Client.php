@@ -49,6 +49,11 @@ class Client
     private $client;
 
     /**
+     * @var CookieJar
+     */
+    private $cookieJar;
+
+    /**
      * @var array
      */
     private $requestOptions;
@@ -62,6 +67,7 @@ class Client
     public function __construct(ClientInterface $client, array $requestOptions = [])
     {
         $this->client = $client;
+        $this->cookieJar = new CookieJar();
         $this->requestOptions = $this->getRequestOptions($requestOptions);
     }
 
@@ -76,9 +82,15 @@ class Client
      */
     public function login($username, $password)
     {
+        $this->cookieJar = new CookieJar(); // reset cookies during login
         $this->post(
             '/api/login',
-            ['username' => $username, 'password' => $password]
+            [
+                'username' => $username,
+                'password' => $password,
+                'remember' => true,
+                'strict'   => false
+            ]
         );
     }
 
@@ -87,6 +99,7 @@ class Client
      */
     public function logout()
     {
+        $this->cookieJar = new CookieJar(); // reset cookies during logout
         $this->client->request('get', '/logout', ['allow_redirects' => false] + $this->requestOptions);
     }
 
@@ -200,11 +213,16 @@ class Client
         return $this->client->request('get', $url, $requestOptions);
     }
 
+    public function getCookieJar()
+    {
+        return $this->cookieJar;
+    }
+
     private function getRequestOptions(array $defaultRequestOptions)
     {
         return array_merge(
             [
-                'cookies' => new CookieJar(),
+                'cookies' => $this->cookieJar,
                 'verify' => false
             ],
             $defaultRequestOptions
